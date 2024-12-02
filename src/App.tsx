@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Inventory from './pages/Inventory';
@@ -12,33 +12,8 @@ import PurchaseHistory from './pages/PurchaseHistory';
 import Expenses from './pages/Expenses';
 import DailyBook from './pages/DailyBook';
 import Container from './components/Container';
-import { useStore } from './store/useStore';
 
 function App() {
-  const { 
-    fetchProducts, 
-    fetchCustomers,
-    fetchSuppliers,
-    fetchManufacturingRecords, 
-    fetchSales,
-    fetchPurchases,
-    fetchSystemConfig,
-    fetchRawMaterials,
-    fetchExpenses
-  } = useStore();
-
-  useEffect(() => {
-    fetchProducts();
-    fetchCustomers();
-    fetchSuppliers();
-    fetchManufacturingRecords();
-    fetchSales();
-    fetchPurchases();
-    fetchSystemConfig();
-    fetchRawMaterials();
-    fetchExpenses();
-  }, []);
-
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 import { FileText, Download } from 'lucide-react';
@@ -7,8 +7,19 @@ import ExportModal from '../components/ExportModal';
 import { exportToPdf } from '../utils/exportPdf';
 
 export default function SalesHistory() {
-  const { sales } = useStore();
+  const {
+    sales,
+    fetchSales,
+    isSalesLoaded,
+  } = useStore();
+
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  
+  useEffect(() => {
+    if (!isSalesLoaded) {
+      fetchSales();
+    }
+  }, [fetchSales, isSalesLoaded]);
 
   const handleExport = async (startDate: string, endDate: string) => {
     await exportToPdf(sales, startDate, endDate, 'sales');

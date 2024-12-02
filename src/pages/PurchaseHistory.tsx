@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 import { Download } from 'lucide-react';
@@ -6,8 +6,14 @@ import ExportModal from '../components/ExportModal';
 import { exportToPdf } from '../utils/exportPdf';
 
 export default function PurchaseHistory() {
-  const { purchases } = useStore();
+  const { purchases, fetchPurchases, isPurchasesLoaded } = useStore();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isPurchasesLoaded) {
+      fetchPurchases();
+    }
+  }, [fetchPurchases, isPurchasesLoaded]);
 
   const handleExport = async (startDate: string, endDate: string) => {
     await exportToPdf(purchases, startDate, endDate, 'purchases');

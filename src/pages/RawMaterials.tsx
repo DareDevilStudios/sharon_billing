@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { RawMaterial } from '../types';
 import { useStore } from '../store/useStore';
 
 export default function RawMaterials() {
-  const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial } = useStore();
+  const {
+    rawMaterials,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+    fetchRawMaterials,
+    isRawMaterialsLoaded,
+  } = useStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
@@ -13,7 +21,14 @@ export default function RawMaterials() {
     name: '',
     stock: 0,
     threshold: 0,
+    price: 0,
   });
+
+  useEffect(() => {
+    if (!isRawMaterialsLoaded) {
+      fetchRawMaterials();
+    }
+  }, [fetchRawMaterials, isRawMaterialsLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +47,7 @@ export default function RawMaterials() {
       name: material.name,
       stock: material.stock,
       threshold: material.threshold,
+      price: material.price || 0,
     });
     setIsEditMode(true);
     setIsModalOpen(true);
@@ -48,6 +64,7 @@ export default function RawMaterials() {
       name: '',
       stock: 0,
       threshold: 0,
+      price: 0,
     });
     setSelectedMaterial(null);
     setIsEditMode(false);
@@ -78,55 +95,61 @@ export default function RawMaterials() {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Material Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Threshold
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {rawMaterials.map((material) => (
-              <tr key={material.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{material.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{material.stock}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{material.threshold}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {getStockStatus(material)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(material)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <Pencil className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(material.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Material Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Threshold
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {rawMaterials.map((material) => (
+                <tr key={material.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">{material.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{material.stock}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{material.threshold}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">₹{material.price || 0}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStockStatus(material)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEdit(material)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        <Pencil className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(material.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Modal
@@ -180,6 +203,23 @@ export default function RawMaterials() {
                 setFormData({
                   ...formData,
                   threshold: parseInt(e.target.value),
+                })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Price
+            </label>
+            <input
+              type="number"
+              value={formData.price}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  price: parseFloat(e.target.value),
                 })
               }
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"

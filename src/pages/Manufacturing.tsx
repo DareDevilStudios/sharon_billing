@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { Product, ManufacturingRecord, MaterialUsage, RawMaterial } from '../types';
@@ -6,7 +6,19 @@ import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 
 export default function Manufacturing() {
-  const { products, rawMaterials, manufacturingRecords, addManufacturingRecord } = useStore();
+  const {
+    products,
+    rawMaterials,
+    manufacturingRecords,
+    addManufacturingRecord,
+    fetchProducts,
+    fetchRawMaterials,
+    fetchManufacturingRecords,
+    areProductsLoaded,
+    areRawMaterialsLoaded,
+    areManufacturingRecordsLoaded,
+  } = useStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -16,6 +28,25 @@ export default function Manufacturing() {
   const [materialsUsed, setMaterialsUsed] = useState<MaterialUsage[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [showMaterialDropdown, setShowMaterialDropdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!areProductsLoaded) {
+      fetchProducts();
+    }
+    if (!areRawMaterialsLoaded) {
+      fetchRawMaterials();
+    }
+    if (!areManufacturingRecordsLoaded) {
+      fetchManufacturingRecords();
+    }
+  }, [
+    fetchProducts,
+    fetchRawMaterials,
+    fetchManufacturingRecords,
+    areProductsLoaded,
+    areRawMaterialsLoaded,
+    areManufacturingRecordsLoaded,
+  ]);
 
   // Filter products based on search
   const filteredProducts = products.filter(product =>

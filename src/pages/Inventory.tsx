@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import Modal from '../components/Modal';
 import { Product } from '../types';
@@ -7,7 +7,14 @@ import { calculateInventoryPrice } from '../utils/pricing';
 import html2pdf from 'html2pdf.js';
 
 export default function Inventory() {
-  const { products, addProduct, updateProduct, deleteProduct } = useStore();
+  const {
+    products,
+    fetchProducts,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    areProductsLoaded,
+  } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -17,6 +24,12 @@ export default function Inventory() {
     stockQuantity: 0,
     displayQuantity: 0,
   });
+
+  useEffect(() => {
+    if (!areProductsLoaded) {
+      fetchProducts();
+    }
+  }, [fetchProducts, areProductsLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

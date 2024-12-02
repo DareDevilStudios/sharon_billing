@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, parseISO, isWithinInterval } from 'date-fns';
 import { useStore } from '../store/useStore';
 import { LedgerEntry } from '../types';
@@ -6,12 +6,34 @@ import { Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 
 export default function DailyBook() {
-  const { sales, expenses } = useStore();
+  const {
+    sales,
+    expenses,
+    purchases,
+    fetchSales,
+    fetchExpenses,
+    fetchPurchases,
+    isSalesLoaded,
+    isExpensesLoaded,
+    isPurchasesLoaded
+  } = useStore();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [openingBalance, setOpeningBalance] = useState(0);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [showLedger, setShowLedger] = useState(false);
+
+  useEffect(() => {
+    if (!isSalesLoaded) {
+      fetchSales();
+    }
+    if (!isExpensesLoaded) {
+      fetchExpenses();
+    }
+    if (!isPurchasesLoaded) {
+      fetchPurchases();
+    }
+  }, [fetchSales, fetchExpenses, fetchPurchases, isSalesLoaded, isExpensesLoaded, isPurchasesLoaded]);
 
   const generateLedger = () => {
     if (!startDate || !endDate) return;
@@ -26,6 +48,10 @@ export default function DailyBook() {
 
     const filteredExpenses = expenses.filter(expense => 
       isWithinInterval(parseISO(expense.date), { start, end })
+    );
+
+    const filteredPurchases = purchases.filter(purchase => 
+      isWithinInterval(parseISO(purchase.date), { start, end })
     );
 
     // Combine and sort all transactions by date
@@ -43,6 +69,13 @@ export default function DailyBook() {
         amount: expense.amount,
         description: expense.name,
         reference: expense.invoiceNumber
+      })),
+      ...filteredPurchases.map(purchase => ({
+        date: purchase.date,
+        type: 'PURCHASE' as const,
+        amount: purchase.subtotal,
+        description: `Purchase from ${purchase.supplierName}`,
+        reference: purchase.invoiceNumber
       }))
     ].sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
 
@@ -72,6 +105,7 @@ export default function DailyBook() {
           reference: transaction.reference
         });
       } else {
+        // Both EXPENSE and PURCHASE reduce the balance
         currentBalance -= transaction.amount;
         entries.push({
           date: transaction.date,
@@ -175,7 +209,7 @@ export default function DailyBook() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Start Date
@@ -225,54 +259,56 @@ export default function DailyBook() {
 
         {showLedger && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Reference
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Credit
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Debit
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Balance
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {ledger.map((entry, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {format(parseISO(entry.date), 'dd/MM/yyyy')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {entry.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {entry.reference || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {entry.credit ? `₹${entry.credit}` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {entry.debit ? `₹${entry.debit}` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      ₹{entry.balance}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Reference
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Credit
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Debit
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Balance
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {ledger.map((entry, index) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {format(parseISO(entry.date), 'dd/MM/yyyy')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {entry.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {entry.reference || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        {entry.credit ? `₹${entry.credit}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        {entry.debit ? `₹${entry.debit}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        ₹{entry.balance}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

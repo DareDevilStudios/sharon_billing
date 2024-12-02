@@ -1,9 +1,15 @@
-import React from 'react';
+import React,{useEffect} from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 
 export default function ExpenseList() {
-  const { expenses } = useStore();
+  const { expenses, fetchExpenses, isExpensesLoaded } = useStore();
+
+  useEffect(() => {
+    if (!isExpensesLoaded) {
+      fetchExpenses();
+    }
+  }, [fetchExpenses, isExpensesLoaded]);
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">

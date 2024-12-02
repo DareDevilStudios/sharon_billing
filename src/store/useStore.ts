@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { Product, Customer, ManufacturingRecord, Sale, SystemConfig, SaleItem, RawMaterial, Supplier, Purchase, PurchaseItem, Expense } from '../types';
 
 interface Store {
+  // Data
   products: Product[];
   customers: Customer[];
   suppliers: Supplier[];
@@ -13,7 +14,19 @@ interface Store {
   expenses: Expense[];
   systemConfig: SystemConfig | null;
   rawMaterials: RawMaterial[];
+
+  // Loading states
+  isProductsLoaded: boolean;
+  isCustomersLoaded: boolean;
+  isSuppliersLoaded: boolean;
+  isManufacturingRecordsLoaded: boolean;
+  isSalesLoaded: boolean;
+  isPurchasesLoaded: boolean;
+  isExpensesLoaded: boolean;
+  isSystemConfigLoaded: boolean;
+  isRawMaterialsLoaded: boolean;
   
+  // Actions
   fetchProducts: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
@@ -48,6 +61,7 @@ interface Store {
 }
 
 export const useStore = create<Store>((set, get) => ({
+  // Initial state
   products: [],
   customers: [],
   suppliers: [],
@@ -58,13 +72,25 @@ export const useStore = create<Store>((set, get) => ({
   systemConfig: null,
   rawMaterials: [],
 
+  // Initial loading states
+  isProductsLoaded: false,
+  isCustomersLoaded: false,
+  isSuppliersLoaded: false,
+  isManufacturingRecordsLoaded: false,
+  isSalesLoaded: false,
+  isPurchasesLoaded: false,
+  isExpensesLoaded: false,
+  isSystemConfigLoaded: false,
+  isRawMaterialsLoaded: false,
+
+  // Actions
   fetchProducts: async () => {
     const querySnapshot = await getDocs(collection(db, 'products'));
     const products = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Product[];
-    set({ products });
+    set({ products, isProductsLoaded: true });
   },
 
   addProduct: async (product) => {
@@ -95,7 +121,7 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as Customer[];
-    set({ customers });
+    set({ customers, isCustomersLoaded: true });
   },
 
   addCustomer: async (customer) => {
@@ -110,7 +136,7 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as Supplier[];
-    set({ suppliers });
+    set({ suppliers, isSuppliersLoaded: true });
   },
 
   addSupplier: async (supplier) => {
@@ -125,7 +151,7 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as ManufacturingRecord[];
-    set({ manufacturingRecords: records });
+    set({ manufacturingRecords: records, isManufacturingRecordsLoaded: true });
   },
 
   addManufacturingRecord: async (record) => {
@@ -170,9 +196,12 @@ export const useStore = create<Store>((set, get) => ({
         lastInvoiceNumber: 0
       };
       await setDoc(doc(db, 'system_config', 'invoice'), initialConfig);
-      set({ systemConfig: initialConfig });
+      set({ systemConfig: initialConfig, isSystemConfigLoaded: true });
     } else {
-      set({ systemConfig: { id: configDoc.id, ...configDoc.data() } as SystemConfig });
+      set({ 
+        systemConfig: { id: configDoc.id, ...configDoc.data() } as SystemConfig,
+        isSystemConfigLoaded: true
+      });
     }
   },
 
@@ -211,7 +240,7 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as Sale[];
-    set({ sales });
+    set({ sales, isSalesLoaded: true });
   },
 
   addSale: async (sale) => {
@@ -245,19 +274,27 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as Purchase[];
-    set({ purchases });
+    set({ purchases, isPurchasesLoaded: true });
   },
 
   addPurchase: async (purchase) => {
     const docRef = await addDoc(collection(db, 'purchases'), purchase);
     const newPurchase = { id: docRef.id, ...purchase };
     
-    // Update raw material quantities
+    // Update raw material quantities and prices
     for (const item of purchase.items) {
       const material = get().rawMaterials.find(m => m.id === item.materialId);
       if (material) {
         const newStock = material.stock + item.quantity;
-        await get().updateRawMaterial(item.materialId, { stock: newStock });
+        // Update price only if it's different
+        if (material.price !== item.price) {
+          await get().updateRawMaterial(item.materialId, { 
+            stock: newStock,
+            price: item.price 
+          });
+        } else {
+          await get().updateRawMaterial(item.materialId, { stock: newStock });
+        }
       }
     }
     
@@ -271,7 +308,7 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as Expense[];
-    set({ expenses });
+    set({ expenses, isExpensesLoaded: true });
   },
 
   addExpense: async (expense) => {
@@ -286,7 +323,7 @@ export const useStore = create<Store>((set, get) => ({
       id: doc.id,
       ...doc.data()
     })) as RawMaterial[];
-    set({ rawMaterials: materials });
+    set({ rawMaterials: materials, isRawMaterialsLoaded: true });
   },
 
   addRawMaterial: async (material) => {

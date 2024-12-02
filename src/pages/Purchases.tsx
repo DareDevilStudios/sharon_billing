@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Download } from 'lucide-react';
 import Modal from '../components/Modal';
 import ExportModal from '../components/ExportModal';
@@ -14,7 +14,19 @@ import TotalCard from '../components/TotalCard';
 import AddItemButton from '../components/AddItemButton';
 
 export default function Purchases() {
-  const { rawMaterials, suppliers, purchases, addSupplier, addPurchase } = useStore();
+  const {
+    rawMaterials,
+    suppliers,
+    purchases,
+    addSupplier,
+    addPurchase,
+    isRawMaterialsLoaded,
+    isSuppliersLoaded,
+    isPurchasesLoaded,
+    fetchRawMaterials,
+    fetchSuppliers,
+    fetchPurchases
+  } = useStore();
   
   const [supplierSearch, setSupplierSearch] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -27,6 +39,18 @@ export default function Purchases() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!isRawMaterialsLoaded) {
+      fetchRawMaterials();
+    }
+    if (!isSuppliersLoaded) {
+      fetchSuppliers();
+    }
+    if (!isPurchasesLoaded) {
+      fetchPurchases();
+    }
+  }, [isRawMaterialsLoaded, isSuppliersLoaded, isPurchasesLoaded, fetchRawMaterials, fetchSuppliers, fetchPurchases]);
 
   // Filter suppliers based on search
   const filteredSuppliers = suppliers.filter(supplier =>
@@ -76,11 +100,14 @@ export default function Purchases() {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
 
   const handleSubmit = async () => {
-    if (!selectedSupplier || !invoiceNumber) return;
+    if (!selectedSupplier || items.length === 0) {
+      setErrorMessage('Please select a supplier and add items');
+      return;
+    }
 
     try {
       const purchase = {
-        invoiceNumber,
+        invoiceNumber: invoiceNumber || "-",
         supplierId: selectedSupplier.id,
         supplierName: selectedSupplier.name,
         items,
@@ -99,11 +126,18 @@ export default function Purchases() {
 
   const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSupplier.name || !newSupplier.phone || !newSupplier.address) return;
+    if (!newSupplier.name || !newSupplier.phone || !newSupplier.address) {
+      setErrorMessage('Please fill in all supplier details');
+      return;
+    }
 
-    await addSupplier(newSupplier as Omit<Supplier, 'id'>);
-    setIsSupplierModalOpen(false);
-    setNewSupplier({});
+    try {
+      await addSupplier(newSupplier as Omit<Supplier, 'id'>);
+      setIsSupplierModalOpen(false);
+      setNewSupplier({});
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to add supplier');
+    }
   };
 
   const handleExport = async (startDate: string, endDate: string) => {
@@ -116,6 +150,7 @@ export default function Purchases() {
     setItems([]);
     setInvoiceNumber('');
     setPurchaseDate(format(new Date(), 'yyyy-MM-dd'));
+    setErrorMessage('');
   };
 
   return (
@@ -149,7 +184,7 @@ export default function Purchases() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Invoice Number
+              Invoice Number (Optional)
             </label>
             <input
               type="text"
@@ -157,7 +192,6 @@ export default function Purchases() {
               onChange={(e) => setInvoiceNumber(e.target.value)}
               className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               placeholder="Enter invoice number..."
-              required
             />
           </div>
           <div>
@@ -207,7 +241,7 @@ export default function Purchases() {
             total={subtotal}
             onSubmit={() => setIsConfirmModalOpen(true)}
             submitLabel="Complete Purchase"
-            disabled={!selectedSupplier || items.length === 0 || !invoiceNumber}
+            disabled={!selectedSupplier || items.length === 0}
           />
         </div>
       </Card>

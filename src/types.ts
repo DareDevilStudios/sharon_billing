@@ -1,17 +1,9 @@
-export interface Product {
-  id: string;
-  name: string;
-  salesPrice: number;
-  inventoryPrice: number;
-  stockQuantity: number;
-  displayQuantity: number;
-}
-
 export interface RawMaterial {
   id: string;
   name: string;
   stock: number;
   threshold: number;
+  price: number;
 }
 
 export interface MaterialUsage {
@@ -98,7 +90,7 @@ export interface SystemConfig {
 export interface LedgerEntry {
   date: string;
   description: string;
-  type: 'OPENING' | 'SALE' | 'EXPENSE';
+  type: 'OPENING' | 'SALE' | 'EXPENSE' | 'PURCHASE';
   credit: number;
   debit: number;
   balance: number;

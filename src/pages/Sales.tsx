@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import Modal from '../components/Modal';
@@ -14,7 +14,17 @@ import { format } from 'date-fns';
 
 export default function Sales() {
   const navigate = useNavigate();
-  const { products, customers, addCustomer, addSale, validateStock } = useStore();
+  const {
+    products,
+    customers,
+    addCustomer,
+    addSale,
+    validateStock,
+    fetchProducts,
+    fetchCustomers,
+    isProductsLoaded,
+    isCustomersLoaded,
+  } = useStore();
   
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -28,6 +38,15 @@ export default function Sales() {
   const [showProductDropdown, setShowProductDropdown] = useState<number | null>(null);
   const [saleDate, setSaleDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [vehicleNumber, setVehicleNumber] = useState('');
+
+  useEffect(() => {
+    if (!isProductsLoaded) {
+      fetchProducts();
+    }
+    if (!isCustomersLoaded) {
+      fetchCustomers();
+    }
+  }, [fetchProducts, fetchCustomers, isProductsLoaded, isCustomersLoaded]);
 
   // Filter customers based on search
   const filteredCustomers = customers.filter(customer =>
