@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import Modal from '../components/Modal';
@@ -38,6 +38,7 @@ export default function Sales() {
   const [showProductDropdown, setShowProductDropdown] = useState<number | null>(null);
   const [saleDate, setSaleDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [productSearches, setProductSearches] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isProductsLoaded) {
@@ -65,6 +66,7 @@ export default function Sales() {
         total: 0,
       },
     ]);
+    setProductSearches([...productSearches, '']);
   };
 
   const updateItem = (index: number, field: keyof SaleItem, value: any) => {
@@ -88,8 +90,16 @@ export default function Sales() {
     setItems(newItems);
   };
 
+  const updateProductSearch = (index: number, search: string) => {
+    const newSearches = [...productSearches];
+    newSearches[index] = search;
+    setProductSearches(newSearches);
+    setShowProductDropdown(index);
+  };
+
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
+    setProductSearches(productSearches.filter((_, i) => i !== index));
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
@@ -127,22 +137,28 @@ export default function Sales() {
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCustomer.name || !newCustomer.phone || !newCustomer.address) return;
+    if (!newCustomer.name || !newCustomer.address) {
+      setErrorMessage('Please fill in customer name and address');
+      return;
+    }
 
-    await addCustomer(newCustomer as Omit<Customer, 'id'>);
-    setIsCustomerModalOpen(false);
-    setNewCustomer({});
+    try {
+      await addCustomer(newCustomer as Omit<Customer, 'id'>);
+      setIsCustomerModalOpen(false);
+      setNewCustomer({});
+      setErrorMessage('');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to add customer');
+    }
   };
 
   const renderProductSelect = (index: number, item: SaleItem) => (
     <div className="relative">
       <input
         type="text"
-        value={item.productName}
+        value={productSearches[index] || ''}
         onChange={(e) => {
-          const search = e.target.value;
-          updateItem(index, 'productName', search);
-          setShowProductDropdown(index);
+          updateProductSearch(index, e.target.value);
         }}
         className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         placeholder="Search product..."
@@ -151,7 +167,7 @@ export default function Sales() {
         <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
           {products
             .filter(product =>
-              product.name.toLowerCase().includes(item.productName.toLowerCase())
+              product.name.toLowerCase().includes((productSearches[index] || '').toLowerCase())
             )
             .map((product) => (
               <div
@@ -159,6 +175,7 @@ export default function Sales() {
                 className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                 onClick={() => {
                   updateItem(index, 'productId', product.id);
+                  updateProductSearch(index, product.name);
                   setShowProductDropdown(null);
                 }}
               >
@@ -281,7 +298,7 @@ export default function Sales() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Phone
+              Phone (Optional)
             </label>
             <input
               type="tel"
@@ -290,7 +307,6 @@ export default function Sales() {
                 setNewCustomer({ ...newCustomer, phone: e.target.value })
               }
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
             />
           </div>
           <div>

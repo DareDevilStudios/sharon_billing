@@ -20,7 +20,11 @@ export const generateExportHTML = (
     });
   });
 
+  // Calculate total excluding cancelled sales
   const total = filteredRecords.reduce((sum, record) => {
+    if ('isCancelled' in record && record.isCancelled) {
+      return sum;
+    }
     return sum + ('total' in record ? record.total : record.subtotal);
   }, 0);
 
@@ -45,13 +49,14 @@ export const generateExportHTML = (
             </th>
             ${type === 'purchases' ? '<th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Materials</th>' : ''}
             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Amount</th>
+            ${type === 'sales' ? '<th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Status</th>' : ''}
           </tr>
         </thead>
         <tbody>
           ${filteredRecords
             .map(
               (record) => `
-            <tr>
+            <tr ${('isCancelled' in record && record.isCancelled) ? 'style="background-color: #fee2e2;"' : ''}>
               <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
                 ${format(parseISO(record.date), 'dd/MM/yyyy')}
               </td>
@@ -76,6 +81,12 @@ export const generateExportHTML = (
                   'total' in record ? record.total : record.subtotal
                 }
               </td>
+              ${type === 'sales' ? 
+                `<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: ${('isCancelled' in record && record.isCancelled) ? '#dc2626' : '#059669'};">
+                  ${('isCancelled' in record && record.isCancelled) ? 'Cancelled' : 'Active'}
+                </td>` 
+                : ''
+              }
             </tr>
           `
             )
@@ -83,8 +94,9 @@ export const generateExportHTML = (
         </tbody>
         <tfoot>
           <tr style="font-weight: bold; background-color: #f3f4f6;">
-            <td colspan="${type === 'purchases' ? '4' : '3'}" style="padding: 12px; text-align: right;">Total:</td>
+            <td colspan="${type === 'purchases' ? '4' : '4'}" style="padding: 12px; text-align: right;">Total:</td>
             <td style="padding: 12px; text-align: right;">₹${total}</td>
+            ${type === 'sales' ? '<td></td>' : ''}
           </tr>
         </tfoot>
       </table>

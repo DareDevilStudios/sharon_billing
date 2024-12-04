@@ -1,7 +1,20 @@
 import { create } from 'zustand';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Product, Customer, ManufacturingRecord, Sale, SystemConfig, SaleItem, RawMaterial, Supplier, Purchase, PurchaseItem, Expense } from '../types';
+import { 
+  Product, 
+  Customer, 
+  ManufacturingRecord, 
+  Sale, 
+  SystemConfig, 
+  SaleItem, 
+  RawMaterial, 
+  Supplier, 
+  Purchase, 
+  PurchaseItem, 
+  Expense,
+  ReturnItem 
+} from '../types';
 
 interface Store {
   // Data
@@ -44,6 +57,8 @@ interface Store {
   fetchSales: () => Promise<void>;
   addSale: (sale: Omit<Sale, 'invoiceNumber' | 'id'>) => Promise<Sale>;
   validateStock: (items: SaleItem[]) => { valid: boolean; message: string };
+  cancelSale: (saleId: string) => Promise<void>;
+  returnSaleItems: (saleId: string, returnedItems: ReturnItem[]) => Promise<void>;
 
   fetchPurchases: () => Promise<void>;
   addPurchase: (purchase: Omit<Purchase, 'id'>) => Promise<Purchase>;
@@ -266,6 +281,66 @@ export const useStore = create<Store>((set, get) => ({
     
     set(state => ({ sales: [...state.sales, newSale] }));
     return newSale;
+  },
+
+  cancelSale: async (saleId: string) => {
+    const sale = get().sales.find(s => s.id === saleId);
+    if (!sale) throw new Error('Sale not found');
+
+    // Restore product quantities
+    for (const item of sale.items) {
+      const product = get().products.find(p => p.id === item.productId);
+      if (product) {
+        const effectiveQuantity = item.quantity - (item.returnedQuantity || 0);
+        const newStockQuantity = product.stockQuantity + effectiveQuantity;
+        await get().updateProduct(item.productId, { stockQuantity: newStockQuantity });
+      }
+    }
+
+    // Mark sale as cancelled
+    await updateDoc(doc(db, 'sales', saleId), { isCancelled: true });
+
+    // Update local state
+    set(state => ({
+      sales: state.sales.map(sale =>
+        sale.id === saleId ? { ...sale, isCancelled: true } : sale
+      )
+    }));
+  },
+
+  returnSaleItems: async (saleId: string, returnedItems: ReturnItem[]) => {
+    const sale = get().sales.find(s => s.id === saleId);
+    if (!sale) throw new Error('Sale not found');
+
+    // Update product quantities
+    for (const returnItem of returnedItems) {
+      if (returnItem.returnQuantity > 0) {
+        const product = get().products.find(p => p.id === returnItem.productId);
+        if (product) {
+          const newStockQuantity = product.stockQuantity + returnItem.returnQuantity;
+          await get().updateProduct(returnItem.productId, { stockQuantity: newStockQuantity });
+        }
+
+        // Update sale item returned quantity
+        const updatedItems = sale.items.map(item =>
+          item.productId === returnItem.productId
+            ? {
+                ...item,
+                returnedQuantity: (item.returnedQuantity || 0) + returnItem.returnQuantity
+              }
+            : item
+        );
+
+        await updateDoc(doc(db, 'sales', saleId), { items: updatedItems });
+
+        // Update local state
+        set(state => ({
+          sales: state.sales.map(s =>
+            s.id === saleId ? { ...s, items: updatedItems } : s
+          )
+        }));
+      }
+    }
   },
 
   fetchPurchases: async () => {

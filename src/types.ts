@@ -41,6 +41,7 @@ export interface SaleItem {
   quantity: number;
   price: number;
   total: number;
+  returnedQuantity?: number;
 }
 
 export interface PurchaseItem {
@@ -72,6 +73,7 @@ export interface Sale {
   total: number;
   date: string;
   vehicleNumber?: string;
+  isCancelled?: boolean;
 }
 
 export interface Expense {
@@ -95,4 +97,12 @@ export interface LedgerEntry {
   debit: number;
   balance: number;
   reference?: string;
+}
+
+export interface ReturnItem {
+  productId: string;
+  productName: string;
+  currentQuantity: number;
+  returnQuantity: number;
+  maxQuantity: number;
 }
