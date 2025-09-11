@@ -12,7 +12,7 @@ interface Item {
 interface ItemsTableProps {
   items: Item[];
   onRemoveItem: (index: number) => void;
-  onUpdateItem: (index: number, field: string, value: any) => void;
+  onUpdateItem: (index: number, field: string, value: number | string) => void;
   renderItemSelect: (index: number, item: Item) => React.ReactNode;
 }
 
@@ -25,8 +25,9 @@ export default function ItemsTable({
   return (
     <>
       {/* Desktop view */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="hidden lg:block">
+        <div className="">
+          <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -75,6 +76,7 @@ export default function ItemsTable({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Mobile view */}

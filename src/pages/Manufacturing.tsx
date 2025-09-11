@@ -11,6 +11,7 @@ export default function Manufacturing() {
     rawMaterials,
     manufacturingRecords,
     addManufacturingRecord,
+    deleteManufacturingRecord,
     fetchProducts,
     fetchRawMaterials,
     fetchManufacturingRecords,
@@ -28,6 +29,9 @@ export default function Manufacturing() {
   const [materialsUsed, setMaterialsUsed] = useState<MaterialUsage[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [showMaterialDropdown, setShowMaterialDropdown] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     if (!areProductsLoaded) {
@@ -211,11 +215,75 @@ export default function Manufacturing() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">{record.quantity}</td>
                 <td className="px-6 py-4">{formatMaterialsList(record.materialsUsed)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <button
+                    className="text-red-600 hover:text-red-900"
+                    title="Delete Manufacturing Record"
+                    onClick={() => {
+                      setSelectedRecordId(record.id);
+                      setDeleteError('');
+                      setIsDeleteModalOpen(true);
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Manufacturing Record"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">{deleteError}</div>
+          )}
+          <p>Are you sure you want to delete this manufacturing record? This will reduce the finished product stock and add back the used raw materials.</p>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!selectedRecordId) return;
+                // Pre-check availability before deletion
+                const record = manufacturingRecords.find(r => r.id === selectedRecordId);
+                if (!record) {
+                  setDeleteError('Record not found');
+                  return;
+                }
+                const product = products.find(p => p.id === record.productId);
+                if (!product) {
+                  setDeleteError('Product not found for this record');
+                  return;
+                }
+                if (product.stockQuantity < record.quantity) {
+                  setDeleteError(`Cannot delete. Not enough product stock to rollback. Current: ${product.stockQuantity}, required: ${record.quantity}`);
+                  return;
+                }
+                try {
+                  await deleteManufacturingRecord(selectedRecordId);
+                  setIsDeleteModalOpen(false);
+                  setSelectedRecordId(null);
+                } catch (e) {
+                  setDeleteError(e instanceof Error ? e.message : 'Failed to delete record');
+                }
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={isModalOpen}

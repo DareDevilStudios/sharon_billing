@@ -24,6 +24,7 @@ export default function Sales() {
     fetchCustomers,
     isProductsLoaded,
     isCustomersLoaded,
+    getCurrentInvoiceNumber,
   } = useStore();
   
   const [customerSearch, setCustomerSearch] = useState('');
@@ -39,6 +40,7 @@ export default function Sales() {
   const [saleDate, setSaleDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [productSearches, setProductSearches] = useState<string[]>([]);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
 
   useEffect(() => {
     if (!isProductsLoaded) {
@@ -47,13 +49,30 @@ export default function Sales() {
     if (!isCustomersLoaded) {
       fetchCustomers();
     }
-  }, [fetchProducts, fetchCustomers, isProductsLoaded, isCustomersLoaded]);
+    // Load current invoice number
+    const loadInvoiceNumber = async () => {
+      try {
+        const currentNumber = await getCurrentInvoiceNumber();
+        setInvoiceNumber((currentNumber + 1).toString());
+      } catch (error) {
+        console.error('Failed to load invoice number:', error);
+      }
+    };
+    loadInvoiceNumber();
+  }, [fetchProducts, fetchCustomers, isProductsLoaded, isCustomersLoaded, getCurrentInvoiceNumber]);
 
   // Filter customers based on search
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
     customer.address.toLowerCase().includes(customerSearch.toLowerCase())
   );
+
+  // Convert Customer to Entity format for CustomerSupplierSearch
+  const filteredCustomersAsEntities = filteredCustomers.map(customer => ({
+    id: customer.id,
+    name: customer.name,
+    address: customer.address,
+  }));
 
   const addItem = () => {
     setItems([
@@ -69,7 +88,7 @@ export default function Sales() {
     setProductSearches([...productSearches, '']);
   };
 
-  const updateItem = (index: number, field: keyof SaleItem, value: any) => {
+  const updateItem = (index: number, field: string, value: number | string) => {
     const newItems = [...items];
     const item = { ...newItems[index] };
 
@@ -82,8 +101,9 @@ export default function Sales() {
         item.total = item.quantity * product.salesPrice;
       }
     } else if (field === 'quantity') {
-      item.quantity = value;
-      item.total = value * item.price;
+      const numValue = typeof value === 'string' ? parseInt(value) : value;
+      item.quantity = numValue;
+      item.total = numValue * item.price;
     }
 
     newItems[index] = item;
@@ -125,6 +145,7 @@ export default function Sales() {
         total,
         date: saleDate,
         vehicleNumber,
+        invoiceNumber,
       };
 
       const newSale = await addSale(sale);
@@ -152,7 +173,16 @@ export default function Sales() {
     }
   };
 
-  const renderProductSelect = (index: number, item: SaleItem) => (
+  // Convert SaleItem to Item format for ItemsTable
+  const itemsForTable = items.map(item => ({
+    id: item.productId,
+    name: item.productName,
+    price: item.price,
+    quantity: item.quantity,
+    total: item.total,
+  }));
+
+  const renderProductSelect = (index: number) => (
     <div className="relative">
       <input
         type="text"
@@ -160,11 +190,17 @@ export default function Sales() {
         onChange={(e) => {
           updateProductSearch(index, e.target.value);
         }}
+        onFocus={() => setShowProductDropdown(index)}
+        onClick={(e) => e.stopPropagation()}
         className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         placeholder="Search product..."
       />
       {showProductDropdown === index && (
-        <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
+        <div 
+          className="absolute z-[9999] w-full mt-1 bg-white rounded-md shadow-xl max-h-60 overflow-auto border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'absolute', top: '100%', left: 0, right: 0 }}
+        >
           {products
             .filter(product =>
               product.name.toLowerCase().includes((productSearches[index] || '').toLowerCase())
@@ -172,7 +208,7 @@ export default function Sales() {
             .map((product) => (
               <div
                 key={product.id}
-                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   updateItem(index, 'productId', product.id);
                   updateProductSearch(index, product.name);
@@ -191,7 +227,7 @@ export default function Sales() {
   );
 
   return (
-    <div>
+    <div onClick={() => setShowProductDropdown(null)}>
       <PageHeader title="New Sale" />
       
       {errorMessage && (
@@ -207,7 +243,20 @@ export default function Sales() {
       )}
       
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Invoice Number
+            </label>
+            <input
+              type="text"
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Enter invoice number..."
+              required
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Sale Date
@@ -242,11 +291,14 @@ export default function Sales() {
             setShowCustomerDropdown(true);
           }}
           showDropdown={showCustomerDropdown}
-          filteredResults={filteredCustomers}
-          onSelect={(customer) => {
-            setSelectedCustomer(customer);
-            setCustomerSearch(customer.name);
-            setShowCustomerDropdown(false);
+          filteredResults={filteredCustomersAsEntities}
+          onSelect={(entity) => {
+            const customer = customers.find(c => c.id === entity.id);
+            if (customer) {
+              setSelectedCustomer(customer);
+              setCustomerSearch(customer.name);
+              setShowCustomerDropdown(false);
+            }
           }}
           onAddNew={() => setIsCustomerModalOpen(true)}
           placeholder="Search customer..."
@@ -257,10 +309,10 @@ export default function Sales() {
         <AddItemButton onClick={addItem} label="Add Item" />
 
         <ItemsTable
-          items={items}
+          items={itemsForTable}
           onRemoveItem={removeItem}
           onUpdateItem={updateItem}
-          renderItemSelect={renderProductSelect}
+          renderItemSelect={(index) => renderProductSelect(index)}
         />
 
         <div className="mt-6">

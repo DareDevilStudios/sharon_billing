@@ -11,7 +11,6 @@ import {
   RawMaterial, 
   Supplier, 
   Purchase, 
-  PurchaseItem, 
   Expense,
   ReturnItem 
 } from '../types';
@@ -53,21 +52,26 @@ interface Store {
   
   fetchManufacturingRecords: () => Promise<void>;
   addManufacturingRecord: (record: Omit<ManufacturingRecord, 'id'>) => Promise<void>;
+  deleteManufacturingRecord: (recordId: string) => Promise<void>;
   
   fetchSales: () => Promise<void>;
-  addSale: (sale: Omit<Sale, 'invoiceNumber' | 'id'>) => Promise<Sale>;
+  addSale: (sale: Omit<Sale, 'id'>) => Promise<Sale>;
+  updateSale: (saleId: string, sale: Partial<Sale>) => Promise<void>;
   validateStock: (items: SaleItem[]) => { valid: boolean; message: string };
   cancelSale: (saleId: string) => Promise<void>;
   returnSaleItems: (saleId: string, returnedItems: ReturnItem[]) => Promise<void>;
 
   fetchPurchases: () => Promise<void>;
   addPurchase: (purchase: Omit<Purchase, 'id'>) => Promise<Purchase>;
+  deletePurchase: (purchaseId: string) => Promise<void>;
 
   fetchExpenses: () => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
   
   fetchSystemConfig: () => Promise<void>;
   getNextInvoiceNumber: () => Promise<string>;
+  getCurrentInvoiceNumber: () => Promise<number>;
+  saveInvoiceNumber: (invoiceNumber: number) => Promise<void>;
 
   fetchRawMaterials: () => Promise<void>;
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
@@ -203,6 +207,41 @@ export const useStore = create<Store>((set, get) => ({
     set(state => ({ manufacturingRecords: [...state.manufacturingRecords, newRecord] }));
   },
 
+  deleteManufacturingRecord: async (recordId: string) => {
+    const record = get().manufacturingRecords.find(r => r.id === recordId);
+    if (!record) {
+      throw new Error('Manufacturing record not found');
+    }
+
+    // Validate ability to rollback finished goods stock
+    const product = get().products.find(p => p.id === record.productId);
+    if (!product) {
+      throw new Error('Product not found for this record');
+    }
+    if (product.stockQuantity < record.quantity) {
+      throw new Error(`Cannot delete: insufficient product stock to rollback. Current: ${product.stockQuantity}, required: ${record.quantity}`);
+    }
+
+    // Rollback product stock (remove produced quantity)
+    await get().updateProduct(record.productId, { stockQuantity: product.stockQuantity - record.quantity });
+
+    // Add back raw materials used
+    for (const material of record.materialsUsed) {
+      const rawMaterial = get().rawMaterials.find(m => m.id === material.materialId);
+      if (rawMaterial) {
+        await get().updateRawMaterial(material.materialId, { stock: rawMaterial.stock + material.quantity });
+      }
+    }
+
+    // Delete the record in Firestore
+    await deleteDoc(doc(db, 'manufacturing', recordId));
+
+    // Update local state
+    set(state => ({
+      manufacturingRecords: state.manufacturingRecords.filter(r => r.id !== recordId)
+    }));
+  },
+
   fetchSystemConfig: async () => {
     const configDoc = await getDoc(doc(db, 'system_config', 'invoice'));
     if (!configDoc.exists()) {
@@ -230,6 +269,17 @@ export const useStore = create<Store>((set, get) => ({
     });
     
     return nextNumber.toString().padStart(5, '0');
+  },
+
+  getCurrentInvoiceNumber: async () => {
+    const configDoc = await getDoc(doc(db, 'system_config', 'invoice'));
+    return configDoc.exists() ? configDoc.data().lastInvoiceNumber : 0;
+  },
+
+  saveInvoiceNumber: async (invoiceNumber: number) => {
+    await updateDoc(doc(db, 'system_config', 'invoice'), {
+      lastInvoiceNumber: invoiceNumber
+    });
   },
 
   validateStock: (items) => {
@@ -264,8 +314,9 @@ export const useStore = create<Store>((set, get) => ({
       throw new Error(stockValidation.message);
     }
 
-    const invoiceNumber = await get().getNextInvoiceNumber();
-    const saleWithInvoice = { ...sale, invoiceNumber };
+    // Save the invoice number to the system config
+    await get().saveInvoiceNumber(parseInt(sale.invoiceNumber));
+    const saleWithInvoice = { ...sale, invoiceNumber: sale.invoiceNumber };
 
     const docRef = await addDoc(collection(db, 'sales'), saleWithInvoice);
     const newSale = { id: docRef.id, ...saleWithInvoice };
@@ -281,6 +332,50 @@ export const useStore = create<Store>((set, get) => ({
     
     set(state => ({ sales: [...state.sales, newSale] }));
     return newSale;
+  },
+
+  updateSale: async (saleId, saleData) => {
+    const existingSale = get().sales.find(s => s.id === saleId);
+    if (!existingSale) {
+      throw new Error('Sale not found');
+    }
+
+    // If items are being updated, validate stock
+    if (saleData.items) {
+      const stockValidation = get().validateStock(saleData.items);
+      if (!stockValidation.valid) {
+        throw new Error(stockValidation.message);
+      }
+
+      // Restore original stock quantities
+      for (const item of existingSale.items) {
+        const product = get().products.find(p => p.id === item.productId);
+        if (product) {
+          const effectiveQuantity = item.quantity - (item.returnedQuantity || 0);
+          const newStockQuantity = product.stockQuantity + effectiveQuantity;
+          await get().updateProduct(item.productId, { stockQuantity: newStockQuantity });
+        }
+      }
+
+      // Update with new stock quantities
+      for (const item of saleData.items) {
+        const product = get().products.find(p => p.id === item.productId);
+        if (product) {
+          const newStockQuantity = product.stockQuantity - item.quantity;
+          await get().updateProduct(item.productId, { stockQuantity: newStockQuantity });
+        }
+      }
+    }
+
+    // Update the sale in Firestore
+    await updateDoc(doc(db, 'sales', saleId), saleData);
+
+    // Update local state
+    set(state => ({
+      sales: state.sales.map(sale =>
+        sale.id === saleId ? { ...sale, ...saleData } : sale
+      )
+    }));
   },
 
   cancelSale: async (saleId: string) => {
@@ -375,6 +470,41 @@ export const useStore = create<Store>((set, get) => ({
     
     set(state => ({ purchases: [...state.purchases, newPurchase] }));
     return newPurchase;
+  },
+
+  deletePurchase: async (purchaseId: string) => {
+    const purchase = get().purchases.find(p => p.id === purchaseId);
+    if (!purchase) {
+      throw new Error('Purchase not found');
+    }
+
+    // Validate stock rollback feasibility
+    for (const item of purchase.items) {
+      const material = get().rawMaterials.find(m => m.id === item.materialId);
+      if (!material) {
+        throw new Error(`Material not found for item ${item.materialName}`);
+      }
+      if (material.stock < item.quantity) {
+        throw new Error(
+          `Cannot delete purchase: insufficient stock to rollback ${item.materialName}. Current: ${material.stock}, required: ${item.quantity}`
+        );
+      }
+    }
+
+    // Rollback stock
+    for (const item of purchase.items) {
+      const material = get().rawMaterials.find(m => m.id === item.materialId);
+      if (material) {
+        const newStock = material.stock - item.quantity;
+        await get().updateRawMaterial(item.materialId, { stock: newStock });
+      }
+    }
+
+    // Delete purchase record
+    await deleteDoc(doc(db, 'purchases', purchaseId));
+
+    // Update local state
+    set(state => ({ purchases: state.purchases.filter(p => p.id !== purchaseId) }));
   },
 
   fetchExpenses: async () => {

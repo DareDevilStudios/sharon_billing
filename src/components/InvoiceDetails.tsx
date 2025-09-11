@@ -10,9 +10,9 @@ interface InvoiceDetailsProps {
 export default function InvoiceDetails({ invoiceNumber, date, customer }: InvoiceDetailsProps) {
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-2">Invoice</h2>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="flex justify-between gap-4">
         <div>
+          <h2 className="text-xl font-semibold mb-2">Invoice</h2>
           <p className="text-gray-600">Invoice No: #{invoiceNumber}</p>
           <p className="text-gray-600">
             Date: {new Date(date).toLocaleDateString()}

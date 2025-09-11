@@ -98,6 +98,7 @@ export default function Inventory() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("formData", formData);
     const inventoryPrice = calculateInventoryPrice(formData.salesPrice);
     
     if (isEditMode && selectedProduct) {

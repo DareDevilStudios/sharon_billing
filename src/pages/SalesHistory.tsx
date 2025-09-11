@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
-import { FileText, Download, RotateCcw, XCircle } from 'lucide-react';
+import { FileText, Download, RotateCcw, XCircle, Edit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ExportModal from '../components/ExportModal';
 import ReturnModal from '../components/ReturnModal';
+import EditSaleModal from '../components/EditSaleModal';
 import Modal from '../components/Modal';
 import { exportToPdf } from '../utils/exportPdf';
 import { ReturnItem, Sale } from '../types';
@@ -15,12 +16,14 @@ export default function SalesHistory() {
     fetchSales,
     isSalesLoaded,
     cancelSale,
-    returnSaleItems
+    returnSaleItems,
+    updateSale
   } = useStore();
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   
@@ -52,6 +55,11 @@ export default function SalesHistory() {
     setIsCancelModalOpen(true);
   };
 
+  const handleEditClick = (sale: Sale) => {
+    setSelectedSale(sale);
+    setIsEditModalOpen(true);
+  };
+
   const handleReturnConfirm = async (returnedItems: ReturnItem[]) => {
     if (selectedSale) {
       try {
@@ -72,6 +80,19 @@ export default function SalesHistory() {
         setSelectedSale(null);
       } catch (error) {
         console.error('Error cancelling sale:', error);
+      }
+    }
+  };
+
+  const handleEditSave = async (updatedSale: Partial<Sale>) => {
+    if (selectedSale) {
+      try {
+        await updateSale(selectedSale.id, updatedSale);
+        setIsEditModalOpen(false);
+        setSelectedSale(null);
+      } catch (error) {
+        console.error('Error updating sale:', error);
+        throw error; // Re-throw to let the modal handle the error
       }
     }
   };
@@ -120,7 +141,9 @@ export default function SalesHistory() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sales.map((sale) => (
+            {sales
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((sale) => (
               <tr key={sale.id} className={sale.isCancelled ? 'bg-red-50' : ''}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {format(new Date(sale.date), 'dd/MM/yyyy')}
@@ -149,11 +172,19 @@ export default function SalesHistory() {
                     <Link
                       to={`/invoice/${sale.id}`}
                       className="text-blue-600 hover:text-blue-900"
+                      title="View Invoice"
                     >
                       <FileText className="w-5 h-5" />
                     </Link>
                     {!sale.isCancelled && (
                       <>
+                        <button
+                          onClick={() => handleEditClick(sale)}
+                          className="text-green-600 hover:text-green-900"
+                          title="Edit Sale"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
                         <button
                           onClick={() => handleReturnClick(sale)}
                           className="text-yellow-600 hover:text-yellow-900"
@@ -188,6 +219,16 @@ export default function SalesHistory() {
 
       {selectedSale && (
         <>
+          <EditSaleModal
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedSale(null);
+            }}
+            sale={selectedSale}
+            onSave={handleEditSave}
+          />
+
           <ReturnModal
             isOpen={isReturnModalOpen}
             onClose={() => {

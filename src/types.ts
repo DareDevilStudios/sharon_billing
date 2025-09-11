@@ -1,3 +1,12 @@
+export interface Product {
+  id: string;
+  name: string;
+  salesPrice: number;
+  stockQuantity: number;
+  displayQuantity: number;
+  inventoryPrice?: number;
+}
+
 export interface RawMaterial {
   id: string;
   name: string;

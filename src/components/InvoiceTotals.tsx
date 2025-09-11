@@ -13,10 +13,10 @@ export default function InvoiceTotals({ subtotal, discount, total }: InvoiceTota
         <span className="font-semibold">Subtotal:</span>
         <span>₹{subtotal}</span>
       </div>
-      <div className="flex justify-between mb-2">
+      {discount > 0 && <div className="flex justify-between mb-2">
         <span className="font-semibold">Discount:</span>
         <span>₹{discount}</span>
-      </div>
+      </div>}
       <div className="flex justify-between text-lg font-bold">
         <span>Total:</span>
         <span>₹{total}</span>
