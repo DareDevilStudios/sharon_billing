@@ -5,6 +5,7 @@ import { Product } from '../types';
 import { useStore } from '../store/useStore';
 import { calculateInventoryPrice } from '../utils/pricing';
 import html2pdf from 'html2pdf.js';
+import { format, parse, isValid } from 'date-fns';
 
 export default function Inventory() {
   const {
@@ -33,6 +34,17 @@ export default function Inventory() {
   }, [fetchProducts, isProductsLoaded]);
 
   const handleExport = async () => {
+    const asOnInput = window.prompt('Enter date (DD/MM/YYYY):', format(new Date(), 'dd/MM/yyyy'));
+    if (asOnInput === null || asOnInput.trim() === '') {
+      return;
+    }
+    const parsed = parse(asOnInput, 'dd/MM/yyyy', new Date());
+    if (!isValid(parsed)) {
+      alert('Invalid date. Please use DD/MM/YYYY');
+      return;
+    }
+    const asOnDisplay = format(parsed, 'dd/MM/yyyy');
+
     const inventoryData = products.map(product => ({
       name: product.name,
       price: product.inventoryPrice,
@@ -44,9 +56,9 @@ export default function Inventory() {
 
     const html = `
       <div style="padding: 20px; font-family: Arial, sans-serif;">
-        <h1 style="text-align: center; color: #1a56db; margin-bottom: 20px;">
-          Inventory Report
-        </h1>
+        <div style="text-align: center; margin-bottom: 20px; font-weight: 600; font-size: 24px; color: #111827;">
+          Stock as on ${asOnDisplay}
+        </div>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
           <thead>
             <tr style="background-color: #f3f4f6;">
