@@ -83,6 +83,8 @@ interface Store {
   resetExpenses: () => Promise<void>;
   resetPurchases: () => Promise<void>;
   resetManufacturing: () => Promise<void>;
+  resetRawMaterials: () => Promise<void>;
+  resetInventory: () => Promise<void>;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -600,5 +602,21 @@ export const useStore = create<Store>((set, get) => ({
     snapshot.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
     set({ manufacturingRecords: [] });
+  },
+
+  resetRawMaterials: async () => {
+    const snapshot = await getDocs(collection(db, 'raw_materials'));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    set({ rawMaterials: [] });
+  },
+
+  resetInventory: async () => {
+    const snapshot = await getDocs(collection(db, 'products'));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    set({ products: [] });
   },
 }));

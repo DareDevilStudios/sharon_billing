@@ -4,13 +4,15 @@ import { useStore } from '../store/useStore';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 
-type ResetTarget = 'sales' | 'expenses' | 'purchases' | 'manufacturing';
+type ResetTarget = 'sales' | 'expenses' | 'purchases' | 'manufacturing' | 'rawMaterials' | 'inventory';
 
 const RESET_LABEL: Record<ResetTarget, string> = {
   sales: 'Sales',
   expenses: 'Expenses',
   purchases: 'Purchases',
-  manufacturing: 'Manufacturing'
+  manufacturing: 'Manufacturing',
+  rawMaterials: 'Raw Materials',
+  inventory: 'Inventory'
 };
 
 export default function Settings() {
@@ -22,7 +24,9 @@ export default function Settings() {
     resetSales,
     resetExpenses,
     resetPurchases,
-    resetManufacturing
+    resetManufacturing,
+    resetRawMaterials,
+    resetInventory
   } = useStore();
 
   const [invoiceInput, setInvoiceInput] = useState('');
@@ -100,6 +104,8 @@ export default function Settings() {
       else if (confirmTarget === 'expenses') await resetExpenses();
       else if (confirmTarget === 'purchases') await resetPurchases();
       else if (confirmTarget === 'manufacturing') await resetManufacturing();
+      else if (confirmTarget === 'rawMaterials') await resetRawMaterials();
+      else if (confirmTarget === 'inventory') await resetInventory();
       setResetMessage({ type: 'success', text: `All ${RESET_LABEL[confirmTarget]} data erased` });
       setConfirmTarget(null);
       setConfirmText('');
@@ -110,7 +116,7 @@ export default function Settings() {
     }
   };
 
-  const resetTargets: ResetTarget[] = ['sales', 'expenses', 'purchases', 'manufacturing'];
+  const resetTargets: ResetTarget[] = ['sales', 'expenses', 'purchases', 'manufacturing', 'rawMaterials', 'inventory'];
   const confirmPhrase = confirmTarget ? `RESET ${RESET_LABEL[confirmTarget].toUpperCase()}` : '';
 
   return (
