@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
@@ -10,28 +10,23 @@ import InvoiceTotals from '../components/InvoiceTotals';
 
 export default function Invoice() {
   const { id } = useParams();
-  const { 
-    sales, 
-    customers, 
-    fetchSales, 
+  const {
+    sales,
+    customers,
+    fetchSales,
     fetchCustomers,
     isSalesLoaded,
-    isCustomersLoaded
+    isCustomersLoaded,
   } = useStore();
 
   useEffect(() => {
-    if (!isSalesLoaded) {
-      fetchSales();
-    }
-    if (!isCustomersLoaded) {
-      fetchCustomers();
-    }
+    if (!isSalesLoaded) fetchSales();
+    if (!isCustomersLoaded) fetchCustomers();
   }, [fetchSales, fetchCustomers, isSalesLoaded, isCustomersLoaded]);
-  
-  const sale = sales.find(s => s.id === id);
-  const customer = customers.find(c => sale && c.id === sale.customerId);
 
-  // Show loading state while data is being fetched
+  const sale = sales.find((s) => s.id === id);
+  const customer = customers.find((c) => sale && c.id === sale.customerId);
+
   if (!isSalesLoaded || !isCustomersLoaded) {
     return (
       <div className="max-w-3xl mx-auto p-8">
@@ -52,54 +47,71 @@ export default function Invoice() {
     );
   }
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
-  // Calculate totals considering returned items
-  const itemTotals = sale.items.map(item => ({
+  const itemTotals = sale.items.map((item) => ({
     ...item,
     effectiveQuantity: item.quantity - (item.returnedQuantity || 0),
-    effectiveTotal: (item.quantity - (item.returnedQuantity || 0)) * item.price
+    effectiveTotal:
+      (item.quantity - (item.returnedQuantity || 0)) * item.price,
   }));
 
-  const effectiveSubtotal = itemTotals.reduce((sum, item) => sum + item.effectiveTotal, 0);
+  const effectiveSubtotal = itemTotals.reduce(
+    (sum, item) => sum + item.effectiveTotal,
+    0
+  );
   const effectiveTotal = effectiveSubtotal - sale.discount;
 
   return (
     <>
-      <div className="print:hidden max-w-3xl mx-auto mb-6 flex justify-between items-center">
-        {sale.isCancelled && (
-          <div className="px-4 py-2 bg-red-100 text-red-800 rounded-lg border-2 border-red-200 font-bold">
+      <div className="print:hidden max-w-[210mm] mx-auto mb-4 flex justify-between items-center gap-4">
+        {sale.isCancelled ? (
+          <div className="px-3 py-1 border-2 border-red-600 text-red-700 rounded font-bold text-sm">
             This sale has been cancelled
           </div>
+        ) : (
+          <div />
         )}
         <button
           onClick={handlePrint}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 ml-auto"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700"
         >
           <Printer className="w-5 h-5 mr-2" />
           Print Invoice
         </button>
       </div>
 
-      <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-lg p-8 print:shadow-none print:rounded-none">
+      <div className="invoice-sheet max-w-[210mm] mx-auto bg-white border border-gray-300 p-10 text-black">
         {sale.isCancelled && <CancelledTag />}
         <InvoiceHeader />
-        <InvoiceDetails 
+        <InvoiceDetails
           invoiceNumber={sale.invoiceNumber}
           date={sale.date}
           customer={customer}
+          vehicleNumber={sale.vehicleNumber}
         />
         <InvoiceItemsTable items={itemTotals} />
-        <InvoiceTotals 
+        <InvoiceTotals
           subtotal={effectiveSubtotal}
           discount={sale.discount}
           total={effectiveTotal}
         />
 
-        <div className="mt-12 text-center text-gray-600">
-          <p>Thank you for your business!</p>
+        <div className="grid grid-cols-2 gap-8 text-sm mt-10">
+          <div>
+            <div className="font-semibold mb-1">Terms &amp; Conditions</div>
+            <div className="text-xs leading-relaxed">
+              Goods once sold will not be taken back. All disputes are subject
+              to local jurisdiction.
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="h-16 border-b border-black mb-1"></div>
+            <div className="text-xs font-semibold">
+              Authorized Signatory
+            </div>
+            <div className="text-xs">For SHARON INDUSTRIES</div>
+          </div>
         </div>
       </div>
     </>

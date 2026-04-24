@@ -4,23 +4,56 @@
 
 @media print {
   @page {
-    margin: 0.5cm;
+    size: A4;
+    margin: 10mm;
   }
-  
+
+  html,
   body {
-    print-color-adjust: exact;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  
-  .print\\:hidden {
-    display: none !important;
+
+  body * {
+    visibility: hidden;
   }
-  
-  .print\\:shadow-none {
+
+  .invoice-sheet,
+  .invoice-sheet * {
+    visibility: visible;
+  }
+
+  .invoice-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
-  }
-  
-  .print\\:rounded-none {
+    border: none !important;
     border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .invoice-sheet table {
+    page-break-inside: auto;
+  }
+
+  .invoice-sheet tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .invoice-sheet thead {
+    display: table-header-group;
+  }
+
+  .print\:hidden {
+    display: none !important;
   }
 }
