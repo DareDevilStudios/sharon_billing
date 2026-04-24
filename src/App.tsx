@@ -19,7 +19,7 @@ function MainContent() {
   const { isCollapsed } = useSidebar();
   
   return (
-    <div className={`transition-all duration-300 ${isCollapsed ? 'sm:ml-16' : 'sm:ml-64'}`}>
+    <div className={`transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
       <Container className="py-6">
         <Routes>
           <Route path="/" element={<Inventory />} />
