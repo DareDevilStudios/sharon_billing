@@ -7,9 +7,15 @@ export default function InvoiceHeader() {
       <p className="text-sm text-black mt-1">
         Kanjiramattom P.O, Ernakulam &ndash; 682315
       </p>
+      <p className="text-sm text-black">
+        Phone: 9447797308, 9495997308
+      </p>
       <p className="text-sm text-black">GSTIN: 32BCCPR5468N1Z3</p>
-      <div className="mt-3 inline-block border border-black px-4 py-1 text-sm font-semibold tracking-widest">
-        TAX INVOICE
+      <p className="text-base font-bold uppercase tracking-wider mt-2">
+        GSTIN BILL OF SUPPLY
+      </p>
+      <div className="mt-3 inline-block border border-black px-4 py-1 text-sm font-semibold tracking-wide">
+        Composition Tax Dealer - Not Tax Collection
       </div>
     </div>
   );
