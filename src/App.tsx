@@ -10,6 +10,8 @@ import Purchases from './pages/Purchases';
 import PurchaseHistory from './pages/PurchaseHistory';
 import Expenses from './pages/Expenses';
 import DailyBook from './pages/DailyBook';
+import Customers from './pages/Customers';
+import Settings from './pages/Settings';
 import Container from './components/Container';
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext';
 
@@ -17,7 +19,7 @@ function MainContent() {
   const { isCollapsed } = useSidebar();
   
   return (
-    <div className={`transition-all duration-300 ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+    <div className={`transition-all duration-300 ${isCollapsed ? 'sm:ml-16' : 'sm:ml-64'}`}>
       <Container className="py-6">
         <Routes>
           <Route path="/" element={<Inventory />} />
@@ -30,6 +32,8 @@ function MainContent() {
           <Route path="/invoice/:id" element={<Invoice />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/daily-book" element={<DailyBook />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </Container>
     </div>

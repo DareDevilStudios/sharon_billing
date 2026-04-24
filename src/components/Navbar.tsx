@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Package, Factory, ShoppingCart, History, Database, ShoppingBag, Menu, X, DollarSign, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Factory, ShoppingCart, History, Database, ShoppingBag, Menu, X, DollarSign, BookOpen, ChevronLeft, ChevronRight, Settings, Users } from 'lucide-react';
 import { useSidebar } from '../contexts/SidebarContext';
 
 export default function Navbar() {
@@ -18,14 +18,16 @@ export default function Navbar() {
     { to: '/purchase-history', icon: History, text: 'Purchase History' },
     { to: '/sales', icon: ShoppingCart, text: 'Sales' },
     { to: '/sales-history', icon: History, text: 'Sales History' },
+    { to: '/customers', icon: Users, text: 'Customers' },
     { to: '/expenses', icon: DollarSign, text: 'Expenses' },
     { to: '/daily-book', icon: BookOpen, text: 'Daily Book' },
+    { to: '/settings', icon: Settings, text: 'Settings' },
   ];
 
   return (
     <>
       {/* Mobile Navbar */}
-      <nav className="md:hidden bg-blue-600 text-white shadow-lg print:hidden">
+      <nav className="sm:hidden bg-blue-600 text-white shadow-lg print:hidden">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex-shrink-0 font-bold text-xl">
@@ -41,9 +43,9 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Desktop Sidebar */}
-      <div className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:z-50 print:hidden transition-all duration-300 ${
-        isCollapsed ? 'md:w-16' : 'md:w-64'
+      {/* Desktop/Tablet Sidebar */}
+      <div className={`hidden sm:flex sm:flex-col sm:fixed sm:inset-y-0 sm:left-0 sm:z-50 print:hidden transition-all duration-300 ${
+        isCollapsed ? 'sm:w-16' : 'sm:w-64'
       }`}>
         <div className="flex-1 flex flex-col min-h-0 bg-blue-600 text-white">
           {/* Sidebar Header */}
@@ -64,7 +66,7 @@ export default function Navbar() {
           </div>
 
           {/* Sidebar Navigation */}
-          <nav className="flex-1 px-2 py-4 space-y-1">
+          <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to;
               return (
@@ -91,13 +93,13 @@ export default function Navbar() {
 
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-50 print:hidden">
+        <div className="sm:hidden fixed inset-0 z-50 print:hidden">
           <div
             className="absolute inset-0 bg-black bg-opacity-50"
             onClick={closeSidebar}
           />
 
-          <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-lg">
+          <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-lg overflow-y-auto">
             <div className="p-4 flex justify-between items-center border-b">
               <h2 className="text-xl font-bold text-gray-800">Menu</h2>
               <button

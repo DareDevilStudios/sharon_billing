@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { 
   Product, 
@@ -46,6 +46,7 @@ interface Store {
   
   fetchCustomers: () => Promise<void>;
   addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
+  updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
 
   fetchSuppliers: () => Promise<void>;
   addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
@@ -77,6 +78,11 @@ interface Store {
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
   updateRawMaterial: (id: string, material: Partial<RawMaterial>) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
+
+  resetSales: () => Promise<void>;
+  resetExpenses: () => Promise<void>;
+  resetPurchases: () => Promise<void>;
+  resetManufacturing: () => Promise<void>;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -147,6 +153,15 @@ export const useStore = create<Store>((set, get) => ({
     const docRef = await addDoc(collection(db, 'customers'), customer);
     const newCustomer = { id: docRef.id, ...customer };
     set(state => ({ customers: [...state.customers, newCustomer] }));
+  },
+
+  updateCustomer: async (id, customer) => {
+    await updateDoc(doc(db, 'customers', id), customer);
+    set(state => ({
+      customers: state.customers.map(c =>
+        c.id === id ? { ...c, ...customer } : c
+      )
+    }));
   },
 
   fetchSuppliers: async () => {
@@ -263,11 +278,12 @@ export const useStore = create<Store>((set, get) => ({
     const configDoc = await getDoc(doc(db, 'system_config', 'invoice'));
     const currentNumber = configDoc.exists() ? configDoc.data().lastInvoiceNumber : 0;
     const nextNumber = currentNumber + 1;
-    
-    await updateDoc(doc(db, 'system_config', 'invoice'), {
+
+    await setDoc(doc(db, 'system_config', 'invoice'), {
+      id: 'invoice',
       lastInvoiceNumber: nextNumber
-    });
-    
+    }, { merge: true });
+
     return nextNumber.toString().padStart(5, '0');
   },
 
@@ -277,9 +293,10 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   saveInvoiceNumber: async (invoiceNumber: number) => {
-    await updateDoc(doc(db, 'system_config', 'invoice'), {
+    await setDoc(doc(db, 'system_config', 'invoice'), {
+      id: 'invoice',
       lastInvoiceNumber: invoiceNumber
-    });
+    }, { merge: true });
   },
 
   validateStock: (items) => {
@@ -551,5 +568,37 @@ export const useStore = create<Store>((set, get) => ({
     set(state => ({
       rawMaterials: state.rawMaterials.filter(m => m.id !== id)
     }));
+  },
+
+  resetSales: async () => {
+    const snapshot = await getDocs(collection(db, 'sales'));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    set({ sales: [] });
+  },
+
+  resetExpenses: async () => {
+    const snapshot = await getDocs(collection(db, 'expenses'));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    set({ expenses: [] });
+  },
+
+  resetPurchases: async () => {
+    const snapshot = await getDocs(collection(db, 'purchases'));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    set({ purchases: [] });
+  },
+
+  resetManufacturing: async () => {
+    const snapshot = await getDocs(collection(db, 'manufacturing'));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    set({ manufacturingRecords: [] });
   },
 }));

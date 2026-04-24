@@ -335,7 +335,12 @@ export default function EditSaleModal({ isOpen, onClose, sale, onSave }: EditSal
             placeholder="Search customer..."
           />
 
-          {selectedCustomer && <CustomerDetails customer={selectedCustomer} />}
+          {selectedCustomer && (
+            <CustomerDetails
+              customer={selectedCustomer}
+              onUpdated={(updated) => setSelectedCustomer(updated)}
+            />
+          )}
 
           <AddItemButton onClick={addItem} label="Add Item" />
 
@@ -403,6 +408,21 @@ export default function EditSaleModal({ isOpen, onClose, sale, onSave }: EditSal
                 }
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                GST Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={newCustomer.gstNumber || ''}
+                onChange={(e) =>
+                  setNewCustomer({ ...newCustomer, gstNumber: e.target.value.toUpperCase() })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 uppercase"
+                placeholder="e.g. 29ABCDE1234F1Z5"
+                maxLength={15}
               />
             </div>
             <div className="flex justify-end space-x-3">

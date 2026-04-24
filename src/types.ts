@@ -26,6 +26,7 @@ export interface Customer {
   name: string;
   phone: string;
   address: string;
+  gstNumber?: string;
 }
 
 export interface Supplier {

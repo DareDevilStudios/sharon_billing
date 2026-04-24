@@ -23,6 +23,9 @@ export default function InvoiceDetails({ invoiceNumber, date, customer }: Invoic
           <p className="text-gray-600">{customer.name}</p>
           {customer.phone && <p className="text-gray-600">{customer.phone}</p>}
           <p className="text-gray-600">{customer.address}</p>
+          {customer.gstNumber && (
+            <p className="text-gray-600">GSTIN: {customer.gstNumber}</p>
+          )}
         </div>
       </div>
     </div>
